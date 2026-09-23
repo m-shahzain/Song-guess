@@ -1,0 +1,6 @@
+{
+  "name": "Bollywood 5-Second Music Quiz",
+  "description": "High-energy Bollywood music guessing game where users listen to a 5-second iTunes audio clip and pick the right song from 10 options.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
