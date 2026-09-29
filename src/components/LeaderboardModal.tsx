@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Medal, Sparkles, X, RefreshCw, CheckCircle2, Database } from 'lucide-react';
-import { fetchTopLeaderboard, LeaderboardEntry, isSupabaseConfigured } from '../lib/supabase';
+import { Trophy, Medal, Sparkles, X, RefreshCw, CheckCircle2, Database, RotateCcw } from 'lucide-react';
+import { fetchTopLeaderboard, LeaderboardEntry, isSupabaseConfigured, resetAllScores } from '../lib/supabase';
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -166,17 +166,32 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
         {/* Footer */}
         <div className="mt-5 pt-4 border-t border-purple-800/60 flex items-center justify-between text-xs text-purple-300">
-          <button
-            onClick={loadData}
-            className="flex items-center gap-1.5 hover:text-white text-purple-400 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={loadData}
+              className="flex items-center gap-1.5 hover:text-white text-purple-400 transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+            <button
+              onClick={async () => {
+                setIsLoading(true);
+                const fresh = await resetAllScores();
+                setEntries(fresh);
+                setIsLoading(false);
+              }}
+              className="flex items-center gap-1 text-purple-400 hover:text-amber-300 transition-colors text-[11px] cursor-pointer"
+              title="Reset scores so highest is 45 and all others are < 45 and > 10"
+            >
+              <RotateCcw className="w-3 h-3 text-pink-400" />
+              Reset Scores
+            </button>
+          </div>
 
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-medium rounded-xl transition-all shadow-md shadow-pink-600/20"
+            className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-medium rounded-xl transition-all shadow-md shadow-pink-600/20 cursor-pointer"
           >
             Got it
           </button>
