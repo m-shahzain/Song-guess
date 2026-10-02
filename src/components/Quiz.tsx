@@ -653,7 +653,7 @@ export const Quiz: React.FC = () => {
                         setPlayerName(e.target.value);
                         if (nameError) setNameError(null);
                       }}
-                      placeholder="Enter your name (e.g. Shahzain, Rahim, etc.)"
+                      placeholder="Enter your name to play..."
                       maxLength={24}
                       className={`w-full px-4 py-3.5 rounded-xl bg-[#0b0319] border text-white text-sm placeholder-purple-400/50 focus:outline-none transition-all ${
                         nameError 

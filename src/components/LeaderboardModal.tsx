@@ -181,11 +181,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 setEntries(fresh);
                 setIsLoading(false);
               }}
-              className="flex items-center gap-1 text-purple-400 hover:text-amber-300 transition-colors text-[11px] cursor-pointer"
-              title="Reset scores so highest is 45 and all others are < 45 and > 10"
+              className="flex items-center gap-1 text-purple-400 hover:text-rose-400 transition-colors text-[11px] cursor-pointer"
+              title="Clear all recorded scores from the leaderboard"
             >
               <RotateCcw className="w-3 h-3 text-pink-400" />
-              Reset Scores
+              Clear Leaderboard
             </button>
           </div>
 

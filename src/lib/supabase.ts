@@ -29,56 +29,43 @@ export interface LeaderboardEntry {
   created_at?: string;
 }
 
-// Fallback storage key for local offline/development mode (v3 for reset scores: highest 45, others < 45 and > 10)
-const LOCAL_STORAGE_KEY = 'bollywood_quiz_leaderboard_cache_v3';
+// Fallback storage key for local offline/development mode (v4 clean - no dummy entries)
+const LOCAL_STORAGE_KEY = 'bollywood_quiz_leaderboard_cache_v4';
 
-export const INITIAL_FALLBACK_LEADERBOARD: LeaderboardEntry[] = [
-  { id: '1', username: 'Shahzain', score: 45, created_at: new Date(Date.now() - 3600000 * 2).toISOString() },
-  { id: '2', username: 'Rahim', score: 40, created_at: new Date(Date.now() - 3600000 * 4).toISOString() },
-  { id: '3', username: 'Saad', score: 35, created_at: new Date(Date.now() - 3600000 * 8).toISOString() },
-  { id: '4', username: 'Muiz', score: 30, created_at: new Date(Date.now() - 3600000 * 12).toISOString() },
-  { id: '5', username: 'Awais', score: 25, created_at: new Date(Date.now() - 3600000 * 16).toISOString() },
-  { id: '6', username: 'Simran_DDLJ', score: 20, created_at: new Date(Date.now() - 3600000 * 20).toISOString() },
-  { id: '7', username: 'Bunny_YJHD', score: 18, created_at: new Date(Date.now() - 3600000 * 24).toISOString() },
-  { id: '8', username: 'Kabir_Grooves', score: 15, created_at: new Date(Date.now() - 3600000 * 28).toISOString() },
-  { id: '9', username: 'Poo_K3G', score: 14, created_at: new Date(Date.now() - 3600000 * 32).toISOString() },
-  { id: '10', username: 'Geet_Bhatia', score: 12, created_at: new Date(Date.now() - 3600000 * 36).toISOString() },
-];
+export const INITIAL_FALLBACK_LEADERBOARD: LeaderboardEntry[] = [];
 
 /**
- * Resets all scores locally and in Supabase if configured.
- * Highest score is 45, all others are < 45 and > 10.
+ * Resets/clears all scores locally and in Supabase if configured.
  */
 export async function resetAllScores(): Promise<LeaderboardEntry[]> {
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem('bollywood_quiz_leaderboard_cache');
       localStorage.removeItem('bollywood_quiz_leaderboard_cache_v2');
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_FALLBACK_LEADERBOARD));
+      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v3');
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
     } catch {}
   }
 
   if (supabase) {
     try {
-      for (const entry of INITIAL_FALLBACK_LEADERBOARD) {
-        await supabase
-          .from('leaderboard')
-          .upsert({ username: entry.username, score: entry.score }, { onConflict: 'username' });
-      }
+      // Clear Supabase leaderboard entries
+      await supabase.from('leaderboard').delete().neq('id', 0);
     } catch (err) {
       console.warn('Error resetting Supabase scores:', err);
     }
   }
 
-  return INITIAL_FALLBACK_LEADERBOARD;
+  return [];
 }
 
 export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
-  // Purge any outdated cache versions
+  // Purge any outdated cache versions that contained dummy names/scores
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem('bollywood_quiz_leaderboard_cache');
       localStorage.removeItem('bollywood_quiz_leaderboard_cache_v2');
+      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v3');
     } catch {}
   }
 
@@ -92,17 +79,7 @@ export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
 
       if (error) {
         console.warn('Supabase fetch error, using local storage fallback:', error.message);
-      } else if (data && data.length > 0) {
-        // If Supabase contains scores above 45 or <= 10 from previous sessions, re-align
-        const hasOutdatedScores = data.some((item) => item.score > 45 || item.score <= 10);
-        if (hasOutdatedScores) {
-          try {
-            await resetAllScores();
-            return INITIAL_FALLBACK_LEADERBOARD;
-          } catch (resetErr) {
-            console.warn('Could not reset Supabase rows:', resetErr);
-          }
-        }
+      } else if (data) {
         return data as LeaderboardEntry[];
       }
     } catch (err) {
@@ -115,18 +92,13 @@ export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Check if any entries violate the reset rule (highest 45, others < 45 and > 10)
-        const hasOutdatedScores = parsed.some((item) => item.score > 45 || item.score <= 10);
-        if (!hasOutdatedScores) {
-          return parsed.sort((a, b) => b.score - a.score).slice(0, 10);
-        }
+      if (Array.isArray(parsed)) {
+        return parsed.sort((a, b) => b.score - a.score).slice(0, 10);
       }
     }
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_FALLBACK_LEADERBOARD));
-    return INITIAL_FALLBACK_LEADERBOARD;
+    return [];
   } catch {
-    return INITIAL_FALLBACK_LEADERBOARD;
+    return [];
   }
 }
 
@@ -148,12 +120,6 @@ export async function getPlayerCurrentScore(username: string): Promise<number | 
         .maybeSingle();
 
       if (data && typeof data.score === 'number') {
-        if (data.score > 45 || data.score <= 10) {
-          const fallbackMatch = INITIAL_FALLBACK_LEADERBOARD.find(
-            (item) => item.username.toLowerCase() === cleanName.toLowerCase()
-          );
-          return fallbackMatch ? fallbackMatch.score : null;
-        }
         return data.score;
       }
     } catch (err) {
@@ -168,21 +134,12 @@ export async function getPlayerCurrentScore(username: string): Promise<number | 
       const list: LeaderboardEntry[] = JSON.parse(raw);
       const match = list.find((item) => item.username.toLowerCase() === cleanName.toLowerCase());
       if (match) {
-        if (match.score > 45 || match.score <= 10) {
-          const fallbackMatch = INITIAL_FALLBACK_LEADERBOARD.find(
-            (item) => item.username.toLowerCase() === cleanName.toLowerCase()
-          );
-          return fallbackMatch ? fallbackMatch.score : null;
-        }
         return match.score;
       }
     }
   } catch {}
 
-  const fallbackMatch = INITIAL_FALLBACK_LEADERBOARD.find(
-    (item) => item.username.toLowerCase() === cleanName.toLowerCase()
-  );
-  return fallbackMatch ? fallbackMatch.score : null;
+  return null;
 }
 
 export async function submitLeaderboardScore(
@@ -240,9 +197,9 @@ export async function submitLeaderboardScore(
   let newTotal = pointsToAdd;
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let list: LeaderboardEntry[] = raw ? JSON.parse(raw) : [...INITIAL_FALLBACK_LEADERBOARD];
-    if (!Array.isArray(list) || list.length === 0 || list.some((item) => item.score > 45 || item.score <= 10)) {
-      list = [...INITIAL_FALLBACK_LEADERBOARD];
+    let list: LeaderboardEntry[] = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) {
+      list = [];
     }
     
     const existingIndex = list.findIndex(

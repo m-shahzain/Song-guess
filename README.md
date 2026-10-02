@@ -99,6 +99,50 @@ The app runs on:
 http://localhost:3000
 ```
 
+## Deployment
+
+This app is a standard Vite + React SPA that outputs static assets to the `dist` directory.
+
+### Deploy on Vercel
+
+1. Push your repository to GitHub / GitLab / Bitbucket.
+2. Go to [Vercel](https://vercel.com/) and click **"Add New Project"**.
+3. Import your Git repository.
+4. Vercel will automatically detect **Vite**:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build` (or `vite build`)
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
+5. (Optional) In **Environment Variables**, add:
+   - `VITE_SUPABASE_URL` = your Supabase URL (if using cloud leaderboard)
+   - `VITE_SUPABASE_ANON_KEY` = your Supabase Anon key
+6. Click **Deploy**.
+*(Note: A `vercel.json` rewrite file is already included in this repository to prevent 404 errors on page reloads).*
+
+---
+
+### Deploy on Netlify
+
+#### Option A: Via Netlify Web Dashboard (Git)
+1. Push your repository to GitHub / GitLab / Bitbucket.
+2. Go to [Netlify](https://app.netlify.com/) and click **"Add new site"** > **"Import an existing project"**.
+3. Select your Git provider and choose this repository.
+4. Set the build settings:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+5. (Optional) In **Site configuration** > **Environment variables**, add:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+6. Click **Deploy site**.
+*(Note: The `/public/_redirects` file is pre-configured so Netlify handles client-side routing properly).*
+
+#### Option B: Via Netlify CLI
+```bash
+npm install -g netlify-cli
+npm run build
+netlify deploy --prod --dir=dist
+```
+
 ## Available Scripts
 
 ```bash
