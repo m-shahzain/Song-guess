@@ -177,6 +177,9 @@ create policy "Public leaderboard insert" on public.leaderboard
 
 create policy "Public leaderboard update" on public.leaderboard
   for update using (true);
+
+create policy "Public leaderboard delete" on public.leaderboard
+  for delete using (true);
 ```
 
 ## Notes

@@ -33,7 +33,11 @@ create policy "Public leaderboard insert" on public.leaderboard
 
 -- Allow public score updates when playing again
 create policy "Public leaderboard update" on public.leaderboard
-  for update using (true);`;
+  for update using (true);
+
+-- Allow public leaderboard reset/delete
+create policy "Public leaderboard delete" on public.leaderboard
+  for delete using (true);`;
 
   const copySql = () => {
     navigator.clipboard.writeText(supabaseSql);
