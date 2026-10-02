@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Trophy, Medal, Sparkles, X, RefreshCw, CheckCircle2, Database, RotateCcw } from 'lucide-react';
-import { fetchTopLeaderboard, LeaderboardEntry, isSupabaseConfigured, resetAllScores } from '../lib/supabase';
+import { Trophy, Medal, Sparkles, X, RefreshCw } from 'lucide-react';
+import { fetchTopLeaderboard, LeaderboardEntry } from '../lib/supabase';
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -55,10 +55,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
               <div className="flex items-center gap-2 text-xs text-purple-300/80">
                 <span>Top Bollywood Masters</span>
                 <span aria-hidden="true">·</span>
-                <span className="flex items-center gap-1 text-[11px]">
-                  <Database className="w-3 h-3 text-pink-400" />
-                  {isSupabaseConfigured ? 'Supabase Live' : 'Local + Offline Sync'}
-                </span>
+                <span className="text-[11px] text-pink-300">Live Rankings</span>
               </div>
             </div>
           </div>
@@ -70,14 +67,6 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Status banner */}
-        {!isSupabaseConfigured && (
-          <div className="mt-3 py-2 px-3 bg-purple-950/60 border border-purple-700/40 rounded-lg text-xs text-purple-200 flex items-center justify-between">
-            <span>Ready for Supabase! Add <code className="text-pink-300">VITE_SUPABASE_URL</code> to enable cloud sync.</span>
-            <span className="text-[11px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10">Active</span>
-          </div>
-        )}
 
         {/* Content list */}
         <div className="mt-4 max-h-80 overflow-y-auto pr-1 space-y-2 relative z-10">
@@ -166,28 +155,13 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
         {/* Footer */}
         <div className="mt-5 pt-4 border-t border-purple-800/60 flex items-center justify-between text-xs text-purple-300">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={loadData}
-              className="flex items-center gap-1.5 hover:text-white text-purple-400 transition-colors cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </button>
-            <button
-              onClick={async () => {
-                setIsLoading(true);
-                const fresh = await resetAllScores();
-                setEntries(fresh);
-                setIsLoading(false);
-              }}
-              className="flex items-center gap-1 text-purple-400 hover:text-rose-400 transition-colors text-[11px] cursor-pointer"
-              title="Clear all recorded scores from the leaderboard"
-            >
-              <RotateCcw className="w-3 h-3 text-pink-400" />
-              Clear Leaderboard
-            </button>
-          </div>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1.5 hover:text-white text-purple-400 transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </button>
 
           <button
             onClick={onClose}

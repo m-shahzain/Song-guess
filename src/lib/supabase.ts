@@ -29,41 +29,17 @@ export interface LeaderboardEntry {
   created_at?: string;
 }
 
-// Fallback storage key for local offline/development mode (v4 clean - no dummy entries)
+// Fallback storage key for local offline/development mode (clean - no dummy entries)
 const LOCAL_STORAGE_KEY = 'bollywood_quiz_leaderboard_cache_v4';
 
 export const INITIAL_FALLBACK_LEADERBOARD: LeaderboardEntry[] = [];
 
-// Explicit list of all dummy names to always purge from database and localStorage
-export const DUMMY_NAMES_TO_PURGE = [
-  'shahzain',
-  'rahim',
-  'saad',
-  'muiz',
-  'awais',
-  'simran_ddlj',
-  'bunny_yjhd',
-  'kabir_grooves',
-  'poo_k3g',
-  'geet_bhatia',
-];
-
-// One-time client cleanup on script load
+// Clean legacy cache keys on script load without deleting any names
 if (typeof window !== 'undefined') {
   try {
     localStorage.removeItem('bollywood_quiz_leaderboard_cache');
     localStorage.removeItem('bollywood_quiz_leaderboard_cache_v2');
     localStorage.removeItem('bollywood_quiz_leaderboard_cache_v3');
-    const existing = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (existing) {
-      const parsed = JSON.parse(existing);
-      if (Array.isArray(parsed)) {
-        const cleaned = parsed.filter(
-          (item: LeaderboardEntry) => !DUMMY_NAMES_TO_PURGE.includes(item.username?.trim().toLowerCase())
-        );
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleaned));
-      }
-    }
   } catch {}
 }
 
@@ -73,9 +49,6 @@ if (typeof window !== 'undefined') {
 export async function resetAllScores(): Promise<LeaderboardEntry[]> {
   if (typeof window !== 'undefined') {
     try {
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache');
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v2');
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v3');
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([]));
     } catch {}
@@ -83,15 +56,7 @@ export async function resetAllScores(): Promise<LeaderboardEntry[]> {
 
   if (supabase) {
     try {
-      // First explicitly delete all known dummy names
-      await supabase
-        .from('leaderboard')
-        .delete()
-        .in('username', [
-          'Shahzain', 'Rahim', 'Saad', 'Muiz', 'Awais',
-          'Simran_DDLJ', 'Bunny_YJHD', 'Kabir_Grooves', 'Poo_K3G', 'Geet_Bhatia'
-        ]);
-      // Also delete any remaining rows
+      // Delete all rows in Supabase leaderboard table
       await supabase.from('leaderboard').delete().neq('id', 0);
     } catch (err) {
       console.warn('Error resetting Supabase scores:', err);
@@ -102,42 +67,24 @@ export async function resetAllScores(): Promise<LeaderboardEntry[]> {
 }
 
 export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
-  // Purge any outdated cache versions that contained dummy names/scores
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache');
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v2');
-      localStorage.removeItem('bollywood_quiz_leaderboard_cache_v3');
-    } catch {}
-  }
-
   if (supabase) {
     try {
-      // Proactively purge dummy entries from Supabase in the background
-      Promise.resolve(
-        supabase
-          .from('leaderboard')
-          .delete()
-          .in('username', [
-            'Shahzain', 'Rahim', 'Saad', 'Muiz', 'Awais',
-            'Simran_DDLJ', 'Bunny_YJHD', 'Kabir_Grooves', 'Poo_K3G', 'Geet_Bhatia'
-          ])
-      ).catch(() => {});
-
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
         .order('score', { ascending: false })
-        .limit(20);
+        .limit(25);
 
       if (error) {
         console.warn('Supabase fetch error, using local storage fallback:', error.message);
       } else if (data) {
-        // Filter out any of the old dummy names
-        const cleanList = (data as LeaderboardEntry[]).filter(
-          (entry) => !DUMMY_NAMES_TO_PURGE.includes(entry.username?.trim().toLowerCase())
-        );
-        return cleanList.slice(0, 10);
+        // Sync fetched Supabase data to localStorage cache
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+          } catch {}
+        }
+        return data as LeaderboardEntry[];
       }
     } catch (err) {
       console.warn('Supabase connection failed, using local storage fallback:', err);
@@ -150,11 +97,7 @@ export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const cleanList: LeaderboardEntry[] = parsed.filter(
-          (entry) => !DUMMY_NAMES_TO_PURGE.includes(entry.username?.trim().toLowerCase())
-        );
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleanList));
-        return cleanList.sort((a, b) => b.score - a.score).slice(0, 10);
+        return parsed.sort((a, b) => b.score - a.score).slice(0, 25);
       }
     }
     return [];
@@ -169,7 +112,6 @@ export async function fetchTopLeaderboard(): Promise<LeaderboardEntry[]> {
 export async function getPlayerCurrentScore(username: string): Promise<number | null> {
   const cleanName = username.trim();
   if (!cleanName) return null;
-  if (DUMMY_NAMES_TO_PURGE.includes(cleanName.toLowerCase())) return null;
 
   if (supabase) {
     try {
@@ -195,9 +137,7 @@ export async function getPlayerCurrentScore(username: string): Promise<number | 
     if (raw) {
       const list: LeaderboardEntry[] = JSON.parse(raw);
       const match = list.find(
-        (item) =>
-          item.username.toLowerCase() === cleanName.toLowerCase() &&
-          !DUMMY_NAMES_TO_PURGE.includes(item.username.toLowerCase())
+        (item) => item.username.toLowerCase() === cleanName.toLowerCase()
       );
       if (match) {
         return match.score;
@@ -266,8 +206,6 @@ export async function submitLeaderboardScore(
     let list: LeaderboardEntry[] = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(list)) {
       list = [];
-    } else {
-      list = list.filter((item) => !DUMMY_NAMES_TO_PURGE.includes(item.username?.trim().toLowerCase()));
     }
     
     const existingIndex = list.findIndex(
@@ -305,9 +243,9 @@ export async function submitLeaderboardScore(
     newTotalScore: newTotal,
     previousScore,
     isExistingUser,
-    message: recordedInSupabase
-      ? (isExistingUser ? `Added ${pointsToAdd} pts to your previous score in Supabase!` : 'Saved to Supabase!')
-      : (isExistingUser ? `Added ${pointsToAdd} pts to your previous score!` : 'Saved to leaderboard!')
+    message: isExistingUser
+      ? `Added ${pointsToAdd} pts to your previous score!`
+      : 'Score saved to leaderboard!'
   };
 }
 

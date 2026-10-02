@@ -44,8 +44,7 @@ import {
   submitLeaderboardScore, 
   getPlayerCurrentScore,
   fetchLeaderboardStats,
-  LeaderboardStats,
-  isSupabaseConfigured
+  LeaderboardStats
 } from '../lib/supabase';
 import { LeaderboardModal } from './LeaderboardModal';
 
